@@ -38,7 +38,7 @@ Simply download the Python code, place them in a directory of your choosing, and
 
 ### Executing program
 
-Once the MRR-PRO original files have been placed in a folder, following the same tree structure as given by the MRR-PRO (YYYYMM/YYYYMMDD/[MRR_ORIGINAL_FILE].nc), you can start to set the configuration parameters.
+Once the MRR-PRO original files have been placed in a folder, following the same folder-tree structure as given by the MRR-PRO ( *YYYYMM/YYYYMMDD/[MRR_ORIGINAL_FILE].nc* ), you can start to set the configuration parameters.
 To do so, open the **config.ini** file and set the directory information under the [PATH] sections.
 There, you can decide the path to the original files (the parent directory under which you saved the three of files mentioned before), directories for processed and postprocessed output files, and the auxiliary quantities computed during the preprocessing.
 The other parameters can be left as they are for the first run of the algorithm, but we still encourage you to have a look at them and some options to your preference (e.g. parallelization options, verbose options, ...)
