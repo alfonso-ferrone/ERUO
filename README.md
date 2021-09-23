@@ -85,7 +85,7 @@ All authors are affiliated to EPFL - LTE.
 ## License
 This project is licensed under the GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007.
 
-All program comes with ABSOLUTELY NO WARRANTY
+All program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it under certain conditions.
 
 ## Acknowledgments
@@ -101,3 +101,4 @@ Processing of the MRR-PRO *raw_spectrum*:
 
 Inspirations and code snippets:
 * Colorbar centering around custom value: https://stackoverflow.com/questions/7404116/defining-the-midpoint-of-a-colormap-in-matplotlib
+* Function to split a Numpy array in slices of contiguous non-NaN values: https://stackoverflow.com/questions/14605734/numpy-split-1d-array-of-chunks-separated-by-nans-into-a-list-of-the-chunks
