@@ -48,8 +48,13 @@ To start the preprocessing, type:
 
 python3 01_preprocessing.py
 
-Then, repeat the same action for all the next two steps (processing, postprocessing), by replacing **01_preprocessing.py** with the name of the appropriate script.
-Finally, you can display the equivalent attenuated reflectivity and Doppler velocity of the processed and postprocessed files by launching the **04_generate_quickplots.py** script.
+Then, repeat the same action for all the next step (processing), by replacing **01_preprocessing.py** with the script **02_process_dataset.py**.
+We suggest to run the script **04_generate_quickplots.py**, by setting the flag *QUICKPLOT_PROCESSED* equal to *True* and *QUICKPLOT_POSTPROCESSED* equal to *False* as soon as the processing ends.
+This script displays the equivalent attenuated reflectivity and Doppler velocity of the processed files.
+However, this step is purely optional, and if you prefer not to visualize those products, you can safely skip it.
+Finally, you can postprocess the first set of ERUO products by launching the **03_postprocess_dataset.py** script.
+You can visualize the equivalent attenuated reflectivity and Doppler velocity of the postprocessed files by running the script **04_generate_quickplots.py**, and setting the flag *QUICKPLOT_PROCESSED* equal to *False* and *QUICKPLOT_POSTPROCESSED* equal to *True*.
+Once again, the visualization step is purely optional.
 
 ## Help
 
@@ -66,6 +71,11 @@ A similar operation is needed if your dataset is too large and your computer has
 
 The postprocessing also may need some special attention: if your dataset contains precipitation signal that persist for long period of times and that occupies only  a handful of range gates, the algorithm may confuse them with interference.
 In this case, we advise to lower the thresholds associated with the postprocessing in the **config.ini** file.
+
+You may also encounter problems when the postprocessing tries to handle particulalry short files.
+A typical exaple is when the MRR-PRO starts the aquisition only few minutes before the change of hour, and the first file created only contains these few minutes of measurements.
+In this case, the postprocessing will fail (likely during the identification of leftover interference lines).
+We suggest to move these few problematic processed files to a different directory before starting the postprocessing.
 
 ## Authors
 
