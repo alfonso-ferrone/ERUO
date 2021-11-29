@@ -18,7 +18,10 @@ You can set the MRR-PRO to acquire *spectrum_raw* during the configuration befor
 ### Tutorials
 
 A tutorial on how to use the library has been provided in the "user_manual.pdf".
-Alternatively, a video-tutorial is available at https://youtu.be/rUTj2xojSqo
+
+Alternatively, a video-tutorial is available at:
+
+https://youtu.be/rUTj2xojSqo
 
 ### Dependencies
 
