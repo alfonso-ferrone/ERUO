@@ -2,6 +2,10 @@
 
 Library for the processing of raw spectra collected by the MRR-PRO in snowfall conditions.
 
+The library is described in:
+
+Ferrone, A., Billault-Roux, A.-C. M., and Berne, A.: ERUO: a spectral processing routine for the MRR-PRO, Atmos. Meas. Tech. Discuss. [preprint], https://doi.org/10.5194/amt-2021-294, in review, 2021. 
+
 ## Description
 
 This library has a two-fold objective:
@@ -87,7 +91,7 @@ We suggest to move these few problematic processed files to a different director
 
 ## Authors
 
-The library and the associated scientific publication have been designed and written by:
+The library and the associated scientific publication (DOI: https://doi.org/10.5194/amt-2021-294 ) have been designed and written by:
 * Alfonso Ferrone
 * Anne-Claire Billault-Roux
 * Alexis Berne
