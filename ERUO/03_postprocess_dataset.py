@@ -36,7 +36,7 @@ def main():
     - removal of leftover interference lines
     - removal of random isolated noise
     '''
-	#Reading configuration
+    #Reading configuration
     config_fpath = "config.ini"
     with open(config_fpath) as fp:
         config_object = ConfigParser()
@@ -113,7 +113,6 @@ def main():
     # all_files = all_files[304:]
     # - In case you want to process a specific file knowing its date/time
     # all_files = [f for f in all_files if '20191223_180000' in f]
-    # all_files = [f for f in all_files if '20191214_150000' in f]
 
     for i_f, curr_fpath in enumerate(all_files):
         if VERBOSE and not (i_f % PRINT_EVERY_N):

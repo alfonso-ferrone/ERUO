@@ -17,7 +17,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
-
+import sys
 import os
 import copy
 import datetime
@@ -78,6 +78,16 @@ const_z_calc = ((10.**18) * (lam**4) * k2) / (np.pi**5)
 var_names_info = config_object['INPUT_NECDF_VARIABLE_NAMES']
 spectrum_varname = var_names_info['SPECTRUM_VARNAME']
 
+# Parameters for transfer function problems handling
+transfer_function_parameters = config_object['TRANSFER_FUNCTION_PARAMETERS']
+USE_EXTERNAL_TRANSFER_FUNCTION = bool(int(transfer_function_parameters['USE_EXTERNAL_TRANSFER_FUNCTION']))
+EXTERNAL_TRANSFER_FUNCTION_PATH = transfer_function_parameters['EXTERNAL_TRANSFER_FUNCTION_PATH']
+if USE_EXTERNAL_TRANSFER_FUNCTION:
+    # The transfer function reconstruction is mutually exclusive with the usage of the external one
+    RECONSTRUCT_TRANSFER_FUNCTION = False
+else:
+    RECONSTRUCT_TRANSFER_FUNCTION = bool(int(transfer_function_parameters['RECONSTRUCT_TRANSFER_FUNCTION']))
+
 # Parameters for spectrum reconstruction
 spectrum_reconstruction_parameters = config_object['SPECTRUM_RECONSTRUCTION_PARAMETERS']
 RECONSTRUCT_SPECTRUM = bool(int(spectrum_reconstruction_parameters['RECONSTRUCT_SPECTRUM']))
@@ -91,6 +101,7 @@ if spectrum_varname == 'spectrum_reflectivity':
 else:
     PROMINENCE_THRESHOLD = float(processing_parameters_info['PROMINENCE_THRESHOLD_RAW_SPECTRUM'])
 RELATIVE_PROMINENCE_THRESHOLD = float(processing_parameters_info['RELATIVE_PROMINENCE_THRESHOLD'])
+MAX_NUM_PEAKS_AT_R = int(processing_parameters_info['MAX_NUM_PEAKS_AT_R'])
 
 # Connecting peaks in lines
 WINDOW_R = float(processing_parameters_info['WINDOW_R'])
@@ -109,6 +120,9 @@ MAX_DIFF_NOISE_LVL = float(processing_parameters_info['MAX_DIFF_NOISE_LVL'])
 
 # Computing moments
 CALIB_CONST_FACTOR = float(processing_parameters_info['CALIB_CONST_FACTOR'])
+
+# Removal of isolated peaks from spectrum
+REMOVE_ISOLATED_PEAK_SPECTRUM = bool(int(processing_parameters_info['REMOVE_ISOLATED_PEAK_SPECTRUM']))
 
 # Debugging parameters
 debugging_info = config_object['DEBUGGING_PARAMETERS']
@@ -247,17 +261,19 @@ def reconstruct_transfer_function(transfer_function, max_value_tranfer_fun=9.e9)
     return new_transfer_fun
 
 
-def repeat_spectra(all_spectra, transfer_function,
-                   border_correction, spectrum_varname='spectrum_raw'):
+def repeat_spectra(all_spectra, transfer_function):
     '''
     Function that opens a netCDF file from the MRR and returns all the spectra in a file.
     '''
-    # Repeating the spectrum 3 times 
-    if spectrum_varname == 'spectrum_reflectivity':
-        all_spectra_x3_lin = np.tile(all_spectra, 3)
-    else:
-        # In case it's not reflectivity, we bring it back to linear
-        all_spectra_x3_lin = np.power(10., np.tile(all_spectra, 3) / 10.)
+    # Repeating the spectrum 3 times
+    spectrum_before = np.full(all_spectra.shape, np.nan)
+    spectrum_after = np.full(all_spectra.shape, np.nan)
+
+    spectrum_before[:, :-1, :] = all_spectra[:, 1:, :]
+    spectrum_after[:, 1:, :] = all_spectra[:, :-1, :]
+
+    tiled_spectra = np.concatenate([spectrum_before, all_spectra, spectrum_after], axis=2)
+    all_spectra_x3_lin = np.power(10., tiled_spectra / 10.)
 
     # Now re-shaping the transfer function to apply it later
     m_x3 = all_spectra_x3_lin.shape[2]
@@ -266,7 +282,7 @@ def repeat_spectra(all_spectra, transfer_function,
     return all_spectra_x3_lin, transfer_function_x3
 
 
-def find_raw_peaks(spec, N):
+def find_raw_peaks(spec, N, m, max_num_peaks_at_r=6):
     '''
     Function to find peaks
     '''
@@ -278,15 +294,24 @@ def find_raw_peaks(spec, N):
     v_r_idx_peaks_list = []
 
     for i_r in range(N):
-        peaks, properties = scipy.signal.find_peaks(spec[i_r,:], prominence=PROMINENCE_THRESHOLD)
+        peaks, properties = scipy.signal.find_peaks(spec[i_r,:],
+                                                    prominence=PROMINENCE_THRESHOLD,
+                                                    height=0.)
+        
         if len(peaks):
+            if len(peaks) > max_num_peaks_at_r:
+                peak_heights = properties['peak_heights']
+                peak_order = np.argsort(peak_heights)
+                peaks = peaks[peak_order][-max_num_peaks_at_r:]
+                for k in properties.keys():
+                    properties[k] = properties[k][peak_order][-max_num_peaks_at_r:]
+
             # Only secondary peaks high enough relative to the first one are kept
             accepted = properties['prominences'] > RELATIVE_PROMINENCE_THRESHOLD * \
                                                         np.max(properties['prominences'])
 
             r_idx_peaks_list.append((np.ones(np.sum(accepted))*i_r))
             v_idx_peaks_list.append(peaks[accepted])
-
             v_l_idx_peaks_list.append(properties['left_bases'][accepted])
             v_r_idx_peaks_list.append(properties['right_bases'][accepted])
 
@@ -408,9 +433,9 @@ def exclude_duplicate_lines(v_ny, lines_array, line_v_idx, line_r_idx, line_v, l
                 diff = np.abs(np.nanmedian(line_v[i][comm1] - line_v[j][comm2]))
                 pow_diff = np.abs(np.nanmedian(line_pow_lin[i][comm1] - line_pow_lin[j][comm2]))
 
-                if np.isclose(diff, v_ny, atol=VEL_TOL) and np.isclose(pow_diff, 0., rtol=1.e3) or \
-                    np.isclose(diff, 2.*v_ny, atol=VEL_TOL) and np.isclose(pow_diff, 0., rtol=1.e3) or \
-                    np.isclose(diff, 3.*v_ny, atol=VEL_TOL) and np.isclose(pow_diff, 0., rtol=1.e3):
+                if np.isclose(diff, v_ny, atol=VEL_TOL) or \
+                    np.isclose(diff, 2.*v_ny, atol=VEL_TOL) or \
+                    np.isclose(diff, 3.*v_ny, atol=VEL_TOL):  # and np.isclose(pow_diff, 0., atol=1.e3)
                     cond_v[i,j] = True
                     cond_v[j,i] = True
 
@@ -551,7 +576,7 @@ def exclude_lines_far_from_main_one(v_ny, accepted_lines, accepted_lines_v_idx, 
     return accepted_lines_v2, accepted_lines_v_idx_v2, accepted_lines_r_idx_v2, accepted_lines_v_v2, accepted_lines_r_v2
 
 
-def extract_spectrum_around_peaks(spec, m, r_idx_peaks, v_idx_peaks, v_l_idx_peaks, v_r_idx_peaks,accepted_lines_v2):
+def extract_spectrum_around_peaks(spec, m, r_idx_peaks, v_idx_peaks, v_l_idx_peaks, v_r_idx_peaks, accepted_lines_v2):
     '''
     Function to extract exactly "m" (=num. lines in spectrum from MRR config file) velocity bins
     around the accepted peaks.
@@ -561,42 +586,35 @@ def extract_spectrum_around_peaks(spec, m, r_idx_peaks, v_idx_peaks, v_l_idx_pea
     mask_spec = np.ones(spec.shape, dtype=bool)
     peak_spectrum_masked_dic = {}
     indexes_v = np.arange(spec.shape[1], dtype=int)
-
+    
+    # Masking the peak position
     for l in accepted_lines_v2:
-
         curr_peak_r = r_idx_peaks[l]
-        curr_peak_v_l = v_l_idx_peaks[l]
-        curr_peak_v_r = v_r_idx_peaks[l]
+        curr_peal_v = v_idx_peaks[l]
+        mask_spec[curr_peak_r, curr_peal_v] = False
 
+        # Dictionary used in compute_noise_lvl_std
         for i_r_idx, r_idx in enumerate(curr_peak_r):
-            mask_spec[r_idx, curr_peak_v_l[i_r_idx]:curr_peak_v_r[i_r_idx]] = False
             if r_idx in peak_spectrum_masked_dic.keys():
                 peak_spectrum_masked_dic[r_idx].append(v_idx_peaks[l][i_r_idx])
             else:
                 peak_spectrum_masked_dic[r_idx] = [v_idx_peaks[l][i_r_idx]]
 
     masked_spectrum = np.ma.masked_array(spec, mask=mask_spec)
-
-    # Remove vel bins if more than m
-    for i_r in np.where(np.sum(np.logical_not(mask_spec), axis=1) > m)[0]:
-        num_gates_to_remove = np.sum(1-mask_spec[i_r,:]) - m
-        while num_gates_to_remove > 0:
-            candidates_to_removal = [np.nonzero(~mask_spec[i_r,:])[0][0],
-                                     np.nonzero(~mask_spec[i_r,:])[0][-1]]
-            to_remove = candidates_to_removal[np.argmin(masked_spectrum[i_r,:][candidates_to_removal])]
-            mask_spec[i_r, to_remove] = True
-            num_gates_to_remove = np.sum(1-mask_spec[i_r,:]) - m
-
-    # Add bins if less than m and at leats a measure valid
+    
+    # Add vel. bins until we have m around the peak 
     for i_r in np.where(np.logical_and(np.sum(np.logical_not(mask_spec), axis=1) < m,
                                        np.sum(np.logical_not(mask_spec), axis=1) > 0))[0]:
         num_gates_to_add = m - np.sum(1-mask_spec[i_r,:])
         while num_gates_to_add > 0:
             # We use erosion to expand the mask arounf the valid spectrum
-            erosion = scipy.ndimage.morphology.binary_erosion(mask_spec[i_r,:], border_value=1)
+            # Note: origin=num_gates_to_add%2 allows to cycle between the two sides
+            erosion = scipy.ndimage.binary_erosion(mask_spec[i_r,:], border_value=1)
+
             # And then we do a xor between the result and the old mask to get the eroded pixels
             candidates_to_add = indexes_v[np.logical_xor(erosion, mask_spec[i_r,:])]
-            to_add = candidates_to_add[np.argmin(spec[i_r,:][candidates_to_add])]
+
+            to_add = candidates_to_add[np.argmax(spec[i_r,:][candidates_to_add])]
             mask_spec[i_r, to_add] = False
             num_gates_to_add = m - np.sum(1-mask_spec[i_r,:])
 
@@ -697,17 +715,32 @@ def correct_noise_lvl(noise_lvl_raw, standard_noise_lvl, noise_corr_window, max_
 
 
 def convert_spectrum_to_reflectivity(raw_spec, noise_lvl, noise_std, d_r, transfer_function,
-                                     calibration_constant,  noise_std_factor=1.):
+                                     calibration_constant,  noise_std_factor=0.,
+                                     remove_isolated_peals=True):
     '''
     Refining spectrum, by removing noise and converting to spectral reflectivity
     '''
     # 1. Preparation of noise and signal array
     # Adding a buffer on the noise level
-    noise_lvl += (noise_std * noise_std_factor)
+    if noise_std_factor > 0.:
+        noise_lvl += (noise_std * noise_std_factor)
 
     # Subtract the noise from the power
     spec_out = raw_spec - noise_lvl[:,None]
     spec_out.mask[spec_out < 0] = True # Noise-removed power (by masking)
+    if noise_std_factor > 0.:
+        spec_out += (noise_std * noise_std_factor)[:,None]
+
+    if remove_isolated_peals:
+        img = (spec_out.mask == False)
+        eroded_img = scipy.ndimage.binary_erosion(img)
+        label, num_features = scipy.ndimage.label(img)
+        if num_features:
+            # Looping over all contiguous region of the spectrum
+            for i_feat in range(1,num_features+1):
+                curr_region = (label == i_feat)
+                if not np.sum(eroded_img[curr_region]):
+                    spec_out.mask[curr_region] = True
 
     # Condition on where there is signal (for later noise floor computation)
     ncondi = np.sum(spec_out > 0., axis = 1)
@@ -727,30 +760,6 @@ def convert_spectrum_to_reflectivity(raw_spec, noise_lvl, noise_std, d_r, transf
 
     # 3. Get Noise floor: the noise level integrated over the area where the signal is.
     noise_floor = int(m_x3 / 3) * noise_lvl
-
-    return spec_out, noise_lvl, noise_std, noise_floor
-
-
-def adjustment_spectrum_reflectivity(raw_spec, noise_lvl, noise_std, noise_std_factor=1.):
-    '''
-    Adjust the spectrum with the proper noise level.
-
-    If the original spectrum was already in reflectivity, we do the same operations as the function
-    "convert_spectrum_to_reflectivity", but without the actual conversion
-    '''
-
-    # Adding a buffer on the noise level
-    noise_lvl += (noise_std * noise_std_factor)
-
-    # Subtract the noise from the power
-    spec_out = raw_spec - noise_lvl[:,None]
-    spec_out.mask[spec_out < 0] = True # Noise-removed power
-
-    # Condition on where there is signal (for later noise floor computation)
-    ncondi = np.nansum(spec_out > 0., axis = 1)
-
-    # Get Noise floor: the noise level integrated over the area where the signal is.
-    noise_floor = ncondi * noise_lvl
 
     return spec_out, noise_lvl, noise_std, noise_floor
 
@@ -838,7 +847,8 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
     '''
     # 1. Getting the "raw" peaks
     N = r.shape[0]
-    r_idx_peaks, v_idx_peaks, v_l_idx_peaks, v_r_idx_peaks, idx_peaks = find_raw_peaks(spec, N)
+    r_idx_peaks, v_idx_peaks, v_l_idx_peaks, v_r_idx_peaks, idx_peaks = find_raw_peaks(spec, N, m,
+                                                                                MAX_NUM_PEAKS_AT_R)
     if not len(r_idx_peaks):
         return {}
 
@@ -846,6 +856,8 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
         # To check raw peaks
         fig, ax = plotting.plot_spectrum(spec, v_0_3, r)
         ax.scatter(v_0_3[v_idx_peaks], r[r_idx_peaks]/1000., marker='x', c='g', s=10.)
+        #ax.scatter(v_0_3[v_l_idx_peaks], r[r_idx_peaks]/1000., marker='o', c='r', s=10.)
+        #ax.scatter(v_0_3[v_r_idx_peaks], r[r_idx_peaks]/1000., marker='^', c='orange', s=10.)
 
     # 2. Connecting them in lines
     lines_array, line_v_idx, line_r_idx, line_v, line_r, line_pow_lin, line_min_r, line_max_r, \
@@ -889,7 +901,6 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
         for i_l, l in enumerate(accepted_lines_v2):
             ax.plot(v_0_3[v_idx_peaks[l]], r[r_idx_peaks[l]]/1000., ls=':',
                     marker='.',markersize=10, markeredgecolor='k', alpha=1.)
-
     # 5. Leaving unmasked only "m" vel. bins at each range gate
     masked_spectrum, peak_spectrum_masked_dic = extract_spectrum_around_peaks(spec, m, r_idx_peaks,
                                                                               v_idx_peaks, 
@@ -902,6 +913,8 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
     # 6. Computing noise lvl and std
     noise_mask, noise_lvl_raw, \
             noise_std = compute_noise_lvl_std(r, masked_spectrum, peak_spectrum_masked_dic)
+
+
     # And masking the spectrum where the noise is
     noise_masked_spectrum = np.ma.masked_array(spec, mask=noise_mask)
     # In case we want to smooth the noise level
@@ -917,24 +930,20 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
     if PLOT_NOISE_MASKED_SPECTRUM:
         # Plot 1: the spectrum
         fig, ax = plotting.plot_spectrum(noise_masked_spectrum, v_0_3, r)
+
         # Plot 2: the noise floor
         fig2, axes2 = plotting.plot_noise_smoothed(r, noise_lvl_raw, noise_lvl, noise_lvl_nans,
                                                    noise_lvl_tmp, standard_noise_lvl, noise_std)
 
-    # 8. Final adjustments to the spectrum and noise
-    if spectrum_varname == 'spectrum_raw':
-        # Converting to calibrated, attenuated spectral reflectivity if original spectrum is "raw"
-        noise_masked_spectrum_cal, noise_lvl_cal, noise_std_cal, \
-            noise_floor_cal = convert_spectrum_to_reflectivity(noise_masked_spectrum, noise_lvl,
-                                                               noise_std, d_r, transfer_function_x3,
-                                                               calibration_constant,
-                                                               noise_std_factor=NOISE_STD_FACTOR)
-    else:
-        # Or just subtracting noise, and computing noise floor
-        noise_masked_spectrum_cal, noise_lvl_cal, noise_std_cal, \
-            noise_floor_cal = adjustment_spectrum_reflectivity(noise_masked_spectrum,
-                                                                  noise_lvl, noise_std,
-                                                                  noise_std_factor=NOISE_STD_FACTOR)
+    # 8. Final adjustments to the spectrum and noise:
+    # Converting to calibrated, attenuated spectral reflectivity
+    noise_masked_spectrum_cal, noise_lvl_cal, noise_std_cal, \
+        noise_floor_cal = convert_spectrum_to_reflectivity(noise_masked_spectrum, noise_lvl,
+                                                           noise_std, d_r, transfer_function_x3,
+                                                           calibration_constant,
+                                                           noise_std_factor=NOISE_STD_FACTOR,
+                                                           remove_isolated_peals=REMOVE_ISOLATED_PEAK_SPECTRUM)
+
     # 9. Computing moments of the signal
     spectrum_params = compute_spectra_parameters(noise_masked_spectrum_cal, v_0_3, noise_lvl_cal,
                                                  spectrum_varname=spectrum_varname)
@@ -953,8 +962,10 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
 
     if PLOT_FINAL_PRODUCTS:
         fig, ax = plotting.plot_spectrum_dBZ(v_0_3, r, spectrum_params_dBZ)
+
     if ANY_PLOT:
         plt.show()
+
     return spectrum_params_dBZ
 
 
@@ -1008,8 +1019,23 @@ def process_file(in_fpath, border_correction, interference_mask, spectrum_varnam
         Zea = np.array(ncfile.variables['Zea'])
         # And what we need to convert it to calibrated spectral reflectivity
         calibration_constant = ncfile.variables['calibration_constant'][0] / CALIB_CONST_FACTOR
-        transfer_function = np.array(ncfile.variables['transfer_function'])
-        transfer_function = reconstruct_transfer_function(transfer_function)
+
+        # Transfer function
+        if USE_EXTERNAL_TRANSFER_FUNCTION:
+            # Note that you should use the external transfer function only if the one in the
+            # files has a problem. If you encounter no problem with the transfer function,
+            # set USE_EXTERNAL_TRANSFER_FUNCTION and RECONSTRUCT_TRANSFER_FUNCTION to 0
+            # in the "config.ini" file. 
+            transfer_function_all = np.loadtxt(EXTERNAL_TRANSFER_FUNCTION_PATH, delimiter=',')
+            # We need to convert the transfer function to the correct lenght
+            tf_shrink = int(transfer_function_all.shape[0] / r.shape[0])
+            transfer_function = transfer_function_all[::tf_shrink]
+        else:
+            transfer_function = np.array(ncfile.variables['transfer_function'])
+            # In case ERUO needs to handle the reconstruction (we suggest not to use this function,
+            # unless it is impossible to recover the correct transfer function by asking Metek)
+            if RECONSTRUCT_TRANSFER_FUNCTION:
+                transfer_function = reconstruct_transfer_function(transfer_function)
 
         # Configurables MRR Parameters:
         num_t = all_spectra_raw.shape[0]      # NUmber of time steps
@@ -1068,8 +1094,7 @@ def process_file(in_fpath, border_correction, interference_mask, spectrum_varnam
         all_spectra = all_spectra_raw
 
     # Getting the spectrum corrected and the transfer function repeated three times
-    all_spectra_x3_lin, transfer_function_x3 = repeat_spectra(all_spectra, transfer_function,
-                                                              spectrum_varname)
+    all_spectra_x3_lin, transfer_function_x3 = repeat_spectra(all_spectra, transfer_function)
 
     # Define velocity repeated three times
     v_0_3 = np.tile(v_0, 3)
@@ -1083,7 +1108,6 @@ def process_file(in_fpath, border_correction, interference_mask, spectrum_varnam
     else:
         smooth_median_spec_v2 = smooth_median_spec
 
-
     # Defining maximum number of spectra to process
     if not max_num_spectra_to_process:
         max_num_spectra_to_process = all_spectra_x3_lin.shape[0]
@@ -1095,6 +1119,7 @@ def process_file(in_fpath, border_correction, interference_mask, spectrum_varnam
         output_dic = process_single_spectrum(all_spectra_x3_lin[i_t, :, :], v_0_3, r, m, v_ny,
                                              d_r, transfer_function_x3, calibration_constant,
                                              smooth_median_spec_v2)
+
         # If the processing did not identify any signal, we output matrixes full of "NaN"
         if not len(output_dic.keys()):
             output_dic = empty_var_dic

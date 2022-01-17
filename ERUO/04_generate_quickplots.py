@@ -23,10 +23,15 @@ import netCDF4 as nc
 from configparser import ConfigParser
 from algo import plotting, preprocessing
 
-
-QUICKPLOT_PROCESSED = 1
-QUICKPLOT_POSTPROCESSED = 1
-
+# --------------------------------------------------------------------------------------------------
+# PLOTTING PARAMETERS
+'''
+To display the results of the processing set QUICKPLOT_PROCESSED equal to True.
+To display the postprocessing one, set QUICKPLOT_POSTPROCESSED to True.
+'''
+QUICKPLOT_PROCESSED = True
+QUICKPLOT_POSTPROCESSED = True
+# --------------------------------------------------------------------------------------------------
 
 def main():
     '''

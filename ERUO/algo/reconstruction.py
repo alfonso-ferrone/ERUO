@@ -36,7 +36,7 @@ NOTE: SET PLOT_RECONSTRUCTION TO FALSE BEFORE PROCESSING MORE THAN ONE FILE!
 '''
 PLOT_RECONSTRUCTION = 0
 # The example time step to plot
-IDX_T_PLOT = 60
+IDX_T_PLOT = 0
 
 if PLOT_RECONSTRUCTION:
     # matplotlib necessary only if the debugging plots are enabled

@@ -40,7 +40,7 @@ figsize_4panels_verical = (6,8)
 # import colorcet as cc
 # spectrum_cmap = cc.cm.rainbow
 spectrum_cmap = 'inferno'
-zea_cmap = 'turbo'
+zea_cmap = 'rainbow'
 vel_cmap = 'coolwarm'
 width_cmap = 'viridis'
 snr_cmap = 'plasma'
@@ -51,9 +51,6 @@ timeformat = mdates.DateFormatter('%H:%M')
 
 # Font size
 matplotlib.rcParams.update({'font.size': 5})
-
-# Shading for plots
-matplotlib.rcParams.update({'pcolor.shading': 'nearest'})
 
 # For saving figures
 DPI = 150
@@ -88,13 +85,13 @@ def plot_spectrum_reconstruction(anomaly_2d, reficiendo_2d):
     fig, axes = plt.subplots(1,3, figsize=figsize_3panels)
 
     mappable = axes[0].pcolormesh(np.arange(32), np.arange(256), anomaly_2d,
-                                  cmap=spectrum_cmap)
+                                  cmap=spectrum_cmap, shading='nearest')
     axes[0].set_title('Origianl anomaly')
     plt.sca(axes[0])
     plt.colorbar(mappable=mappable, label='Raw spectrum anomaly [S.U.]')
 
     mappable = axes[1].pcolormesh(np.arange(32), np.arange(256), reficiendo_2d,
-                                  cmap=binary_cmap, vmin=0, vmax=1)
+                                  cmap=binary_cmap, vmin=0, vmax=1, shading='nearest')
     axes[1].set_title('Area to reconstruct')
     plt.sca(axes[1])
     cbar = plt.colorbar(mappable=mappable, label='Binary mask', ticks=[0, 0.5, 1])
@@ -102,7 +99,7 @@ def plot_spectrum_reconstruction(anomaly_2d, reficiendo_2d):
 
     tmp = copy.deepcopy(anomaly_2d)
     tmp[reficiendo_2d] = np.nan
-    mappable = axes[2].pcolormesh(np.arange(32), np.arange(256), tmp, cmap=spectrum_cmap)
+    mappable = axes[2].pcolormesh(np.arange(32), np.arange(256), tmp, cmap=spectrum_cmap, shading='nearest')
     axes[2].set_title('Masked anomaly')
     plt.sca(axes[2])
     plt.colorbar(mappable=mappable, label='Raw spectrum anomaly [S.U.]')
@@ -133,7 +130,8 @@ def plot_spectrum(spec, v_0_3, r):
     # If using "norm", remove "vmin" and "vmax"
     mappable = ax.pcolormesh(v_0_3, r/1000., spec, cmap=spectrum_cmap, # norm=norm,
                              vmin=np.nanquantile(spec[np.isfinite(spec)], q=0.01),
-                             vmax=np.nanquantile(spec[np.isfinite(spec)], q=0.99))
+                             vmax=np.nanquantile(spec[np.isfinite(spec)], q=0.99),
+                             shading='nearest')
     # Bug: nanquantile returns nan for high quantiles (even if it shouldn't, nan values should
     # be ignored). So, I needed to add "np.isfinite(spec)" to ignore them
     plt.sca(ax)
@@ -199,7 +197,7 @@ def plot_spectrum_masked_and_moments(noise_masked_spectrum, v_0_3, r, params, no
 
     # Plotting masked spectrum
     ax0 = axes[0]
-    mappable = ax0.pcolormesh(v_0_3, r/1000., noise_masked_spectrum, cmap=cmap)
+    mappable = ax0.pcolormesh(v_0_3, r/1000., noise_masked_spectrum, cmap=cmap, shading='nearest')
     ax0.set_ylabel('Height AMSL [km]')
     ax0.set_xlabel('Doppler vel. [m/s]')
     ax0.set_title('Spectrum masked - noise floor')
@@ -276,7 +274,7 @@ def plot_spectrum_dBZ(v_0_3, r, output_dic):
 
     # Plotting masked spectrum
     ax0 = axes[0]
-    mappable = ax0.pcolormesh(v_0_3, r/1000., var_to_plot[0], cmap=spectrum_cmap)
+    mappable = ax0.pcolormesh(v_0_3, r/1000., var_to_plot[0], cmap=spectrum_cmap, shading='nearest')
     ax0.set_ylabel('Height AMSL [km]')
     ax0.set_xlabel('Doppler vel. [m/s]')
     ax0.set_title('Spectrum dBZ')
@@ -329,7 +327,7 @@ def plot_clean_spectrum_dBZ(v_0_3, r, output_dic):
 
     # Plotting masked spectrum
     ax0 = axes[0]
-    mappable = ax0.pcolormesh(v_0_3, r/1000., var_to_plot[0], cmap=spectrum_cmap)
+    mappable = ax0.pcolormesh(v_0_3, r/1000., var_to_plot[0], cmap=spectrum_cmap, shading='nearest')
     ax0.set_ylabel('Height AMSL [km]')
     ax0.set_xlabel('Doppler vel. [m/s]')
     ax0.set_title('Spectrum dBZ')
@@ -418,7 +416,7 @@ def plot_initial_specrum_and_vars(fpath, spectrum_varname='spectrum_raw'):
         # Plotting masked spectrum
         ax0 = axes[0]
         mappable = ax0.pcolormesh(v_0, r/1000., var_to_plot[0][0,:,:],
-                                  cmap=spectrum_cmap)
+                                  cmap=spectrum_cmap, shading='nearest')
 
         # Some formatting of the panel
         ax0.set_ylabel('Height AMSL [km]')
@@ -469,7 +467,7 @@ def plot_timeserie_one_file(in_fpath, out_fpath, dpi=150):
 
     # Defining some limits
     vel_lim = np.nanquantile(np.abs(VEL), q=0.999)
-    z_lims = (-10, 30)
+    z_lims = (-20, 10)
 
     # In case the colorbar norm needs to be specified manually
     # norm_za = colors.BoundaryNorm(boundaries=np.arange(-10., 25.0, 1.), ncolors=256)
@@ -479,7 +477,7 @@ def plot_timeserie_one_file(in_fpath, out_fpath, dpi=150):
     ax_za = fig.add_subplot(spec[0, 0])
     ax_za.set_axisbelow(True)
     ax_za.set_facecolor('gray')
-    pza = ax_za.pcolormesh(t, r, Zea.T, cmap=zea_cmap, vmin=z_lims[0], vmax=z_lims[1])
+    pza = ax_za.pcolormesh(t, r, Zea.T, cmap=zea_cmap, vmin=z_lims[0], vmax=z_lims[1], shading='nearest')
     ax_za.set_ylabel('Height [m]')
     ax_za.set_xlabel('')
     # ax_za.set_xlim([ti, tf])
@@ -501,7 +499,7 @@ def plot_timeserie_one_file(in_fpath, out_fpath, dpi=150):
     ax_vel = fig.add_subplot(spec[1, 0])
     ax_vel.set_axisbelow(True)
     ax_vel.set_facecolor('gray')
-    pvel = ax_vel.pcolormesh(t, r, VEL.T, cmap=vel_cmap, vmin=-vel_lim, vmax=vel_lim)
+    pvel = ax_vel.pcolormesh(t, r, VEL.T, cmap=vel_cmap, vmin=-vel_lim, vmax=vel_lim, shading='nearest')
     ax_vel.set_ylabel('Height [m]')
     ax_vel.set_xlabel('')
     # ax_vel.set_xlim([ti, tf])
@@ -521,7 +519,7 @@ def plot_timeserie_one_file(in_fpath, out_fpath, dpi=150):
     # Spectral width
     ax_sw = fig.add_subplot(spec[2, 0])
     ax_sw.set_axisbelow(True)
-    pza = ax_sw.pcolormesh(t, r, WID.T, cmap=width_cmap)
+    pza = ax_sw.pcolormesh(t, r, WID.T, cmap=width_cmap, shading='nearest')
     ax_sw.set_ylabel('Height [m]')
     ax_sw.set_xlabel('')
     # ax_sw.set_xlim([ti, tf])
@@ -541,7 +539,7 @@ def plot_timeserie_one_file(in_fpath, out_fpath, dpi=150):
     # SNR
     ax_snr = fig.add_subplot(spec[3, 0])
     ax_snr.set_axisbelow(True)
-    pvel = ax_snr.pcolormesh(t, r, SNR.T, cmap=snr_cmap)#, norm=norm_vel)
+    pvel = ax_snr.pcolormesh(t, r, SNR.T, cmap=snr_cmap, shading='nearest')#, norm=norm_vel)
     ax_snr.set_ylabel('Height [m]')
     ax_snr.set_xlabel('Time [HH:MM]')
     # ax_snr.set_xlim([ti, tf])
@@ -590,7 +588,7 @@ def plot_postprocessing(t, r, ini_zea, out_zea, postprocessing_stage='Interf. re
     ax_zea_before.set_axisbelow(True)
     ax_zea_before.set_facecolor('gray')
     pzea_before = ax_zea_before.pcolormesh(t, r, ini_zea.T, cmap=zea_cmap,
-                                           vmin=z_lims[0], vmax=z_lims[1])
+                                           vmin=z_lims[0], vmax=z_lims[1], shading='nearest')
     ax_zea_before.set_ylabel('Height [m]')
     ax_zea_before.set_xlabel('Time [HH:MM]')
     ax_zea_before.set_title('Before %s' % postprocessing_stage)
@@ -609,7 +607,7 @@ def plot_postprocessing(t, r, ini_zea, out_zea, postprocessing_stage='Interf. re
     ax_zea_after.set_axisbelow(True)
     ax_zea_after.set_facecolor('gray')
     pzea_after = ax_zea_after.pcolormesh(t, r, out_zea.T, cmap=zea_cmap,
-                                           vmin=z_lims[0], vmax=z_lims[1])
+                                           vmin=z_lims[0], vmax=z_lims[1], shading='nearest')
     ax_zea_after.set_ylabel('Height [m]')
     ax_zea_after.set_xlabel('Time [HH:MM]')
     ax_zea_after.set_title('After %s' % postprocessing_stage)

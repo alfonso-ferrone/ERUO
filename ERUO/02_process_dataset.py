@@ -85,6 +85,16 @@ def main():
         # "processing" library, so we can display their value at the beginning of the analysis
         # rather than at every iteration.
 
+        # Parameters for transfer function problems handling
+        transfer_function_parameters = config_object['TRANSFER_FUNCTION_PARAMETERS']
+        USE_EXTERNAL_TRANSFER_FUNCTION = bool(int(transfer_function_parameters['USE_EXTERNAL_TRANSFER_FUNCTION']))
+        EXTERNAL_TRANSFER_FUNCTION_PATH = transfer_function_parameters['EXTERNAL_TRANSFER_FUNCTION_PATH']
+        if USE_EXTERNAL_TRANSFER_FUNCTION:
+            # The transfer function reconstruction is mutually exclusive with the usage of the external one
+            RECONSTRUCT_TRANSFER_FUNCTION = False
+        else:
+            RECONSTRUCT_TRANSFER_FUNCTION = bool(int(transfer_function_parameters['RECONSTRUCT_TRANSFER_FUNCTION']))
+
         # Parameters for spectrum reconstruction
         spectrum_reconstruction_parameters = config_object['SPECTRUM_RECONSTRUCTION_PARAMETERS']
         MARGIN_SMALL_INTERF_DETECTION = \
@@ -149,6 +159,13 @@ def main():
 
         print('\nINPUT_NECDF_VARIABLE_NAMES')
         print('spectrum_varname: ', spectrum_varname)
+
+        print('\nTRANSFER_FUNCTION_PARAMETERS')
+        print('USE_EXTERNAL_TRANSFER_FUNCTION: ', USE_EXTERNAL_TRANSFER_FUNCTION,
+              ' (type: ', type(USE_EXTERNAL_TRANSFER_FUNCTION), ')')
+        print('EXTERNAL_TRANSFER_FUNCTION_PATH: ', EXTERNAL_TRANSFER_FUNCTION_PATH)
+        print('RECONSTRUCT_TRANSFER_FUNCTION: ', RECONSTRUCT_TRANSFER_FUNCTION,
+              ' (type: ', type(RECONSTRUCT_TRANSFER_FUNCTION), ')')
 
         print('\nSPECTRUM_RECONSTRUCTION_PARAMETERS')
         print('RECONSTRUCT_SPECTRUM: ',RECONSTRUCT_SPECTRUM,
@@ -226,7 +243,7 @@ def main():
         tmp = Parallel(n_jobs=NUM_JOBS)(delayed(process_file_par)(in_fpath) for in_fpath in all_files)
     else:
         for i_f, in_fpath in enumerate(all_files):
-            if VERBOSE and not (i_f % PRINT_EVERY_N):
+            if VERBOSE and not (i_f % 1):
                 print('%d/%d: %s' % (i_f, len(all_files), os.path.basename(in_fpath)))
                 
             # Launching the processing of a single file (which in turn contains several spectra)

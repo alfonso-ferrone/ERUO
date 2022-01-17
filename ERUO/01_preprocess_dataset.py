@@ -31,8 +31,8 @@ following two flags to "True".
 Parameters such as figure size, DPI, and font size can be changed in the "rc parameters" as shown
 below.
 '''
-PLOT_FINAL_PRODUCTS = False
-PLOT_SECONDARY_PRODUCTS = False
+PLOT_FINAL_PRODUCTS = True
+PLOT_SECONDARY_PRODUCTS = True
 
 if PLOT_FINAL_PRODUCTS or PLOT_SECONDARY_PRODUCTS:
     # matplotlib necessary only if the debugging plots are enabled 
