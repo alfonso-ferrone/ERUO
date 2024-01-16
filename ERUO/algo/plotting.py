@@ -180,7 +180,7 @@ def plot_noise_smoothed(r, noise_lvl_raw, noise_lvl, noise_lvl_nans, noise_lvl_t
     return fig2, axes2
 
 
-def plot_spectrum_masked_and_moments(noise_masked_spectrum, v_0_3, r, params, noise_lvl, noise_std):
+def plot_spectrum_masked_and_moments(noise_masked_spectrum, v_0_3, r, params, noise_lvl, cmap=spectrum_cmap):
     '''
     Function to plot spectrum and moments
     '''

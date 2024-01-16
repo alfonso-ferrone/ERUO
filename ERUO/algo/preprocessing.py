@@ -338,7 +338,7 @@ def interference_mask_and_border_correction(in_fpath, out_fpath_interf, out_fpat
         ax1.plot(np.arange(median_line.shape[0]), accepted_r, ls='-', label='accepted_r')
 
         ax2.plot(np.arange(median_line.shape[0]), median_line_grad)
-        ax2.set_yscale('symlog', linthreshy=0.1)
+        ax2.set_yscale('symlog', linthresh=0.1)
         # The limits of accepted gradient
         ax2.axhline(0., ls=':', c='r')
         ax2.axhline(grad_thesh, ls=':', c='r')
@@ -562,7 +562,7 @@ def interference_mask_and_border_correction(in_fpath, out_fpath_interf, out_fpat
                            ls='-', label='accepted_r')
 
         ax2.plot(np.arange(corrected_median_line.shape[0]), corrected_median_line_grad)
-        ax2.set_yscale('symlog', linthreshy=0.1)
+        ax2.set_yscale('symlog', linthresh=0.1)
         # The limits of accepted gradient
         ax2.axhline(0., ls=':', c='r')
         ax2.axhline(grad_thesh, ls=':', c='r')

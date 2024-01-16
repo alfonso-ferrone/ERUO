@@ -279,8 +279,8 @@ def postprocess_file(in_fpath, dir_postproc_netcdf, out_fname_suffix):
 
     # 2. Add the new information
     attrs['field_names'] = ','.join(new_vars_dic.keys())
-    attrs['title'] = attrs['title'] + ' - Post-processed with ASPRO'
-    attrs['history'] = 'Re-processed with ASPRO on %s UTC' % \
+    attrs['title'] = attrs['title'] + ' - Post-processed with ERUO'
+    attrs['history'] = 'Re-processed with ERUO on %s UTC' % \
                         datetime.datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
     
     # 3. Create the new dataset

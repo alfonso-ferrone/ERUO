@@ -925,7 +925,7 @@ def process_single_spectrum(spec, v_0_3, r, m, v_ny, d_r, transfer_function_x3,
                                                             max_diff=MAX_DIFF_NOISE_LVL)
     else:
         noise_lvl = noise_lvl_raw
-        noise_lvl_nans = noise_raw
+        noise_lvl_nans = noise_lvl_raw
 
     if PLOT_NOISE_MASKED_SPECTRUM:
         # Plot 1: the spectrum
@@ -1155,8 +1155,8 @@ def process_file(in_fpath, border_correction, interference_mask, spectrum_varnam
 
     # 2. Add the new information
     attrs['field_names'] = ','.join(concatenated_vars_dic.keys())
-    attrs['title'] = attrs['title'] + ' - Re-processed with ASPRO'
-    attrs['history'] = 'Re-processed with ASPRO on %s UTC' % \
+    attrs['title'] = attrs['title'] + ' - Re-processed with ERUO'
+    attrs['history'] = 'Re-processed with ERUO on %s UTC' % \
                         datetime.datetime.utcnow().strftime('%d/%m/%Y %H:%M:%S')
     
     # 3. Create the new dataset
