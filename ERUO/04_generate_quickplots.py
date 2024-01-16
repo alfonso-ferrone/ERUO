@@ -19,7 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import os
-import netCDF4 as nc
 from configparser import ConfigParser
 from algo import plotting, preprocessing
 

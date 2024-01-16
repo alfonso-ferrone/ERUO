@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import numpy as np
-import netCDF4 as nc
 from configparser import ConfigParser
 from joblib import Parallel, delayed
 from algo import preprocessing, processing
@@ -137,7 +136,6 @@ def main():
         MAX_DIFF_NOISE_LVL = float(processing_parameters_info['MAX_DIFF_NOISE_LVL'])
         # Computing moments
         CALIB_CONST_FACTOR = float(processing_parameters_info['CALIB_CONST_FACTOR'])
-
 
         print('---------------------------------------------------------------------------------')
         print('LOADED CONFIGURATION')

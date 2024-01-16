@@ -23,7 +23,6 @@ import copy
 import datetime
 import scipy
 import numpy as np
-import numpy.ma as ma
 import xarray as xr
 import netCDF4 as nc
 import astropy.convolution

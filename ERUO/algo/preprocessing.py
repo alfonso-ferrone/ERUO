@@ -23,9 +23,6 @@ import copy
 import glob
 import numpy as np
 import netCDF4 as nc
-import scipy
-import scipy.signal
-import astropy.convolution
 from scipy import ndimage
 from configparser import ConfigParser
 from algo import reconstruction

@@ -19,12 +19,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import os
-import numpy as np
-import netCDF4 as nc
-import scipy.ndimage
 from configparser import ConfigParser
-from joblib import Parallel, delayed
-from algo import preprocessing, postprocessing, plotting
+from algo import preprocessing, postprocessing
 
 
 def main():

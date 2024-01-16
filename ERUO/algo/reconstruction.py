@@ -21,7 +21,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import copy
 import scipy
 import numpy as np
-import astropy.convolution
 from astropy.convolution import Gaussian2DKernel, interpolate_replace_nans, convolve
 from configparser import ConfigParser
 from algo import plotting
